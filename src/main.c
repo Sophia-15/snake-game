@@ -3,26 +3,126 @@
  * Created on Aug, 23th 2023
  * Author: Tiago Barros
  * Based on "From C to C++ course - 2002"
-*/
+ * Altered by Sophia-15 <SnakeGame>
+ */
 
 #include <string.h>
+#include <stdlib.h>
 
 #include "screen.h"
 #include "keyboard.h"
 #include "timer.h"
 
-int x = 34, y = 12;
+struct snakeBody
+{
+    char *body;
+    int x;
+    int y;
+    struct snakeBody *next;
+};
+
+int enemyX = 40, enemyY = 5;
+int snakeX = 34, snakeY = 12;
+
 int incX = 1, incY = 1;
 
-void printHello(int nextX, int nextY)
+int linkedLen(struct snakeBody **head)
 {
+    int cont = 0;
+    struct snakeBody *n = *head;
+
+    while (n != NULL)
+    {
+        cont++;
+        n = n->next;
+    }
+
+    return cont;
+}
+
+void addNode(struct snakeBody **head)
+{
+    struct snakeBody *n = *head;
+
+    if (*head == NULL)
+    {
+        struct snakeBody *first = (struct snakeBody *)malloc(sizeof(struct snakeBody));
+        first->body = "o";
+        first->next = NULL;
+        first->x = snakeX;
+        first->y = snakeY;
+        *head = first;
+    }
+    else
+    {
+        while (n->next != NULL)
+        {
+            n = n->next;
+        }
+
+        n->next = (struct snakeBody *)malloc(sizeof(struct snakeBody));
+        n->next->body = "o";
+        n->next->x = snakeX;
+        n->next->y = snakeY;
+        n->next->next = NULL;
+    }
+}
+
+void printSnake(int nextX, int nextY, int collision, struct snakeBody **head)
+{
+    struct snakeBody *n = *head;
+    int previousX = n->x, previousY = n->y;
+    int tempX, tempY;
+    if (collision)
+    {
+        addNode(head);
+    }
     screenSetColor(CYAN, DARKGRAY);
-    screenGotoxy(x, y);
-    printf("           ");
-    x = nextX;
-    y = nextY;
-    screenGotoxy(x, y);
-    printf("Hello World");
+
+    while (n != NULL)
+    {
+        if (n == *head)
+        {
+            n->x = snakeX;
+            n->y = snakeY;
+            screenGotoxy(n->x, n->y);
+            printf(" ");
+            n->x = nextX;
+            n->y = nextY;
+            screenGotoxy(n->x, n->y);
+        }
+        else
+        {
+            tempX = n->x;
+            tempY = n->y;
+
+            screenGotoxy(n->x, n->y);
+            printf(" ");
+
+            n->x = previousX;
+            n->y = previousY;
+
+            screenGotoxy(n->x, n->y);
+
+            previousX = tempX;
+            previousY = tempY;
+        }
+        printf("o");
+        n = n->next;
+    }
+
+    snakeX = nextX;
+    snakeY = nextY;
+}
+
+void printEnemy()
+{
+    int randX = rand() % 80, randY = rand() % 24;
+    screenSetColor(CYAN, DARKGRAY);
+    enemyX = randX;
+    enemyY = randY;
+    screenGotoxy(enemyX, enemyY);
+    printf("🍒");
 }
 
 void printKey(int ch)
@@ -33,9 +133,11 @@ void printKey(int ch)
 
     screenGotoxy(34, 23);
     printf("            ");
-    
-    if (ch == 27) screenGotoxy(36, 23);
-    else screenGotoxy(39, 23);
+
+    if (ch == 27)
+        screenGotoxy(36, 23);
+    else
+        screenGotoxy(39, 23);
 
     printf("%d ", ch);
     while (keyhit())
@@ -44,21 +146,25 @@ void printKey(int ch)
     }
 }
 
-int main() 
+int main()
 {
     static int ch = 0;
+    struct snakeBody *head = NULL;
+    addNode(&head);
 
     screenInit(1);
     keyboardInit();
-    timerInit(50);
+    timerInit(100);
 
-    printHello(x, y);
+    printSnake(snakeX, snakeY, 0, &head);
+    printEnemy(enemyX, enemyY);
     screenUpdate();
 
-    while (ch != 10) //enter
+    // even if the time doesn't exceed i want ch to be on the screen
+    while (ch != 10) // enter
     {
         // Handle user input
-        if (keyhit()) 
+        if (keyhit())
         {
             ch = readch();
             printKey(ch);
@@ -68,14 +174,85 @@ int main()
         // Update game state (move elements, verify collision, etc)
         if (timerTimeOver() == 1)
         {
-            int newX = x + incX;
-            if (newX >= (MAXX -strlen("Hello World") -1) || newX <= MINX+1) incX = -incX;
-            int newY = y + incY;
-            if (newY >= MAXY-1 || newY <= MINY+1) incY = -incY;
+            // dealing with movement
+            int newX, newY;
+            if (ch == 97)
+            {
+                newX = snakeX - incX;
 
+                if (!(newX <= MINX + 1))
+                {
+                    incX = 1;
+                }
+                if (newX <= MINX + 1)
+                {
+
+                    incX = 0;
+                }
+
+                printSnake(newX, snakeY, 0, &head);
+            }
+
+            if (ch == 100)
+            {
+                newX = snakeX + incX;
+
+                if (newX <= (MAXX - strlen("o") - 1))
+                {
+
+                    incX = 1;
+                }
+                if (newX >= (MAXX - strlen("o") - 1))
+                {
+
+                    incX = 0;
+                }
+
+                printSnake(newX, snakeY, 0, &head);
+            }
+
+            if (ch == 115)
+            {
+                newY = snakeY + incY;
+
+                if (newY >= MAXY - 3)
+                {
+                    incY = 0;
+                }
+
+                if (newY <= MAXY - 3)
+                {
+                    incY = 1;
+                }
+
+                printSnake(snakeX, newY, 0, &head);
+            }
+
+            if (ch == 119)
+            {
+                newY = snakeY - incY;
+                if (newY <= MINY + 3)
+                {
+                    incY = 0;
+                }
+
+                if (newY >= MINY + 3)
+                {
+                    incY = 1;
+                }
+
+                printSnake(snakeX, newY, 0, &head);
+            }
+
+            // dealing with collision
+            if (newY == enemyY && (newX == enemyX || enemyX == (newX - 1)))
+            {
+                printEnemy();
+                printSnake(snakeX, snakeY, 1, &head);
+            }
+
+            // Updating screen
             printKey(ch);
-            printHello(newX, newY);
-
             screenUpdate();
         }
     }
