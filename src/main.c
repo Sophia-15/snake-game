@@ -6,8 +6,10 @@
  * Altered by Sophia-15 <SnakeGame>
  */
 
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "screen.h"
 #include "keyboard.h"
@@ -117,7 +119,8 @@ void printSnake(int nextX, int nextY, int collision, struct snakeBody **head)
 
 void printEnemy()
 {
-    int randX = rand() % 80, randY = rand() % 24;
+    srand(time(NULL));
+    int randX = (rand() % 70) + 2, randY = (rand() % 2) + 3;
     screenSetColor(CYAN, DARKGRAY);
     enemyX = randX;
     enemyY = randY;
